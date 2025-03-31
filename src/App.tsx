@@ -1,9 +1,33 @@
-import {Map} from 'react-map-gl/maplibre';
+import { ScatterplotLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
-import {ScatterplotLayer} from '@deck.gl/layers';
+import { Table, tableFromIPC } from 'apache-arrow';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { readParquet } from 'parquet-wasm';
+import { useEffect, useState } from 'react';
+import { Map } from 'react-map-gl/maplibre';
+
 
 export default function App() {
+
+  const [arrowTable, setArrowTable] = useState<Table<any>>();
+
+  useEffect(() => {
+    // React advises to declare the async function directly inside useEffect
+    async function getArrowTable() {
+      const resp = await fetch("https://humusklimanetz-couch.thuenen.de/datasets/Utah.parquet")
+      const buffer = await resp.arrayBuffer()
+      const parquetUint8Array = new Uint8Array(buffer);
+      const arrowWasmTable = readParquet(parquetUint8Array);
+      console.log("arrowWasmTable", arrowWasmTable)
+      const arrowTable = tableFromIPC(arrowWasmTable.intoIPCStream());
+      setArrowTable(arrowTable);
+    };
+    if (!arrowTable) {
+      console.log("toto1")
+        getArrowTable();
+    }
+  }, []);
+  
   const layers = [
     new ScatterplotLayer({
       id: 'deckgl-circle',
